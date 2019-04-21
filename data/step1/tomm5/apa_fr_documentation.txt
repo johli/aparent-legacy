@@ -1,0 +1,55 @@
+Processing & filtering documentation for library: apa_fr (TOMM5)
+
+-Files:
+	--Scripts for creating and filtering library from raw reads:
+	
+		apa_nextseq_v2_dna_processing_v2.ipynb
+			Function:
+			Extract and cluster the TOMM5 Miseq reads, outputting a set of unique DNA sequence variants.
+			The clustering pass groups together sequences with upstream regions <= 4 hamming distance.
+			Canonical sequences per cluster are retrieved by base-pair voting.
+
+			Filters:
+			1. Sequence CAGACACAGCTC (within 1 substitution error) must be present in read 2.
+			2. The regions flanking each side of the randomized regions must match the wildtype sequence (within 1 substitution error / 10bps).
+			3. The sequence in read 1 must not match any of the N10-libraries (within 3 substitution errors / 30 bps).
+			4. The sequence in read 2 must match one of the N20-libraries (within 3 substitution errors / 20 bps).
+			5. The sequence from the start of the 5' random region to the end of the 3'random region is not allowed to contain any indels.
+
+		apa_nextseq_v2_rna_processing.ipynb
+			Function:
+			Extract and filter the TOMM5 Nextseq RNA reads, classifying each read as proximal or distal.
+			The read is classified as distal if the wildtype regions flanking the downstream N20 is found in read 1 with at most 4 substitution errors / 20 bps.
+			Else if 20bps of A:s (allowing 3 substitution errors) are found in read 1, the read is classified as proximal.
+
+			Filters:
+			1. The wildtype regions flanking the upstream N40 must be found in read 1 with at most 4 substitution errors / 20 bps.
+
+		apa_nextseq_v2_distal_rna_processing_v2.ipynb
+			Function:
+			Extract and cluster distal Nextseq RNA reads, outputting a set of unique sequence variants.
+			The Miseq data was missing coverage on some of the sublibraries. This dataset is intended to complement that coverage.
+
+			Filters:
+			1. The regions flanking each side of the randomized regions must match the wildtype sequence (within 1 substitution error / 10bps).
+			2. The sequence in read 1 must not match any of the N10-libraries (within 3 substitution errors / 30 bps).
+			3. The sequence in read 2 must match one of the N20-libraries (within 3 substitution errors / 20 bps).
+			4. The sequence from the start of the 5' random region to the end of the 3'random region is not allowed to contain any indels.
+
+
+		apa_nextseq_v2_dna_merging_v2.ipynb
+			Function:
+			Merge together the Sequence variants from the Miseq data with the variants extracted from distal RNA reads.
+
+			Filters:
+			1. Only keep Miseq sequence variants with read count >= 2
+			2. Only keep Nextseq distal read sequence variants with read count >= 5
+
+		apa_nextseq_v2_library_processing.ipynb
+			Function:
+			Map the filtered RNA reads to the DNA sequence variants, accumulating isoform read counts and cleavage positions.
+			RNA reads are mapped to DNA sequence by matching their upstream regions, allowing 1 substitution error / 20 bps.
+
+			Filters:
+			1. Only accumulate isoform read counts from unique UMI:s. Unique UMI:s must be at least 2 bps apart (the UMI is 6 bp long).
+

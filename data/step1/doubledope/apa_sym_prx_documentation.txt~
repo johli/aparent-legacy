@@ -1,0 +1,58 @@
+Processing & filtering documentation for library: apa_sym_prx (Double-Doped PAS)
+
+-Files:
+	--Scripts for creating and filtering library from raw reads:
+	
+		apa_sym_prx_dna_processing.ipynb
+			Function:
+			Extract and cluster the Miseq Plasmid reads, outputting a set of unique DNA sequence variants.
+			The clustering pass groups together sequences with 20bp barcodes <= 4 hamming distance.
+			Canonical sequences per cluster are retrieved by base-pair voting.
+
+			Filters:
+			1. Edit distance between read 1 and rc of read 2 <= 1.
+			2. Read one must contain sequences CATTACTCGCATCCA and CAGCCAATTAAGCC (allowing 1 substitution error for each sequence).
+			3. At least two reads required per unique sequence variant cluster.
+
+		apa_sym_prx_rna_processing.ipynb
+			Function:
+			Extract and filter the Nextseq RNA reads, determining by local alignment where the RNA was polyadenylated (proximal cut position or distal).
+			Do local pairwise alignment (using scikit-bios local_pairwise_align) between short RNA read and reference Plasmid sequence.
+			If the read maps to a location in the proximal part of the UTR (with align score >= 30 / 50 bps), record the position and classify as proximal.
+			Otherwise, if the short reads maps to the distal part of the UTR (with align score >= 30 / 50 bps), classify as distal.
+
+			Filters:
+			1. Filter out reads with barcodes  that do not map to any Plasmid DNA sequence barcode (within 1 substitution error).
+			2. Filter out reads that cannot be aligned (score < 30) to either the proximal or distal part of the Plasmid UTR.
+
+		apa_sym_prx_library_processing.ipynb
+			Function:
+			Map the filtered RNA reads to the DNA sequence variants, accumulating isoform read counts.
+			RNA reads are mapped to DNA sequence by matching their barcodes, allowing 1 substitution error / 20 bps.
+			Only accumulate isoform counts for unique UMIs (differ by at least 1bp) per sequence variant.
+			
+			Classify an isoform as 5' Proximal if the short read aligned to 10-24bps downstream of the 5' pPAS.
+			Classify an isoform as 3' Proximal if the short read aligned to 10-24bps downstream of the 3' pPAS.
+			Classify an isoform as Distal if the short read aligned to 10-30bps downstream of the dPAS.
+			
+			Filters:
+			1. Filter out reads that do not fall into any of the three isoform categories above.
+			2. Filter out reads with an align score < 60 / 50 bps.
+			3. Filter out reads not passing the anti-mispriming heuristic:
+				If 3 A's are found within the 4 immediate bps following the read alignment start position, the read is misprimed.
+				If 4 A's are found within the 7 immediate bps following the read alignment start position, the read is misprimed.
+				If 5 A's are found within the 8 immediate bps following the read alignment start position, the read is misprimed.
+				If 6 A's are found within the 9 immediate bps following the read alignment start position, the read is misprimed.
+				Otherwise, the read is not misprimed.
+		
+	--Scripts for creating analytical datasets from library:
+
+		process_data_apa_sym_prx_v2
+			Function:
+			Creates dataset of input features and output target values.
+			Used for training machine learning models (LR, CNN).
+			This script creates 1-Hot-Encodings for CNN.
+
+			Filters:
+			1. Total isoform read count (with unique UMI) >= 4
+			2. Filter out sequences with occurrences of AAAA anywhere in the random regions (except in the Doped PASes).
